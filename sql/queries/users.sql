@@ -15,4 +15,4 @@ SELECT * FROM users WHERE name = $1;
 SELECT * FROM users;
 
 -- name: ResetUsers :exec
-TRUNCATE TABLE users;
+DELETE FROM users;
