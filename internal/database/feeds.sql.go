@@ -13,12 +13,7 @@ import (
 
 const createFeed = `-- name: CreateFeed :one
 INSERT INTO feeds (id, name, url, user_id)
-VALUES (
-  $1,
-  $2,
-  $3,
-  $4
-)
+VALUES ($1, $2, $3, $4)
 RETURNING id, created_at, updated_at, name, url, user_id
 `
 
@@ -46,4 +41,44 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 		&i.UserID,
 	)
 	return i, err
+}
+
+const listFeeds = `-- name: ListFeeds :many
+SELECT
+  feeds.name,
+  feeds.url,
+  users.name AS user
+FROM
+  feeds
+INNER JOIN users
+  ON feeds.user_id = users.id
+`
+
+type ListFeedsRow struct {
+	Name string
+	Url  string
+	User string
+}
+
+func (q *Queries) ListFeeds(ctx context.Context) ([]ListFeedsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listFeeds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFeedsRow
+	for rows.Next() {
+		var i ListFeedsRow
+		if err := rows.Scan(&i.Name, &i.Url, &i.User); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

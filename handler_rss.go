@@ -48,7 +48,25 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("couldn't create feed: %v", err)
 	}
 
-	fmt.Printf("%+v", feed)
+	fmt.Println("Feed Created:")
+	fmt.Printf("  * ID: %s\n", feed.ID)
+	fmt.Printf("  * Name: %s\n", feed.Name)
+	fmt.Printf("  * URL: %s\n", feed.Url)
+	fmt.Printf("  * Created at: %s\n", feed.CreatedAt)
+	fmt.Printf("  * Updated at: %s\n", feed.CreatedAt)
+	fmt.Printf("  * User ID: %s\n", feed.UserID)
 
+	return nil
+}
+
+func handlerListFeeds(s *state, cmd command) error {
+	feeds, err := s.db.ListFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("couldn't get feeds: %v", err)
+	}
+	fmt.Println("Found feeds:")
+	for _, feed := range feeds {
+		fmt.Printf("  * Name: %s | URL: %s | User: %s\n", feed.Name, feed.Url, feed.User)
+	}
 	return nil
 }
