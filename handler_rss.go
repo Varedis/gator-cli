@@ -48,6 +48,15 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("couldn't create feed: %v", err)
 	}
 
+	_, err = s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID:     uuid.New(),
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("cannot create feed follow: %v", err)
+	}
+
 	fmt.Println("Feed Created:")
 	fmt.Printf("  * ID: %s\n", feed.ID)
 	fmt.Printf("  * Name: %s\n", feed.Name)
@@ -68,5 +77,62 @@ func handlerListFeeds(s *state, cmd command) error {
 	for _, feed := range feeds {
 		fmt.Printf("  * Name: %s | URL: %s | User: %s\n", feed.Name, feed.Url, feed.User)
 	}
+	return nil
+}
+
+func handlerFollowFeed(s *state, cmd command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("Usage: %s <url>", cmd.Name)
+	}
+
+	url := cmd.Args[0]
+
+	ctx := context.Background()
+
+	// Get Feed
+	feedID, err := s.db.GetFeedByURL(ctx, url)
+	if err != nil {
+		return fmt.Errorf("cannot get feed: %v", err)
+	}
+
+	currentUser := s.cfg.CurrentUserName
+	user, err := s.db.GetUser(ctx, currentUser)
+	if err != nil {
+		return fmt.Errorf("cannot get current user: %v", err)
+	}
+
+	feedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID:     uuid.New(),
+		UserID: user.ID,
+		FeedID: feedID,
+	})
+	if err != nil {
+		return fmt.Errorf("couldn't create feed follow: %v", err)
+	}
+
+	fmt.Println("Followed Feed:")
+	fmt.Printf("  * Name: %s\n", feedFollow.FeedName)
+	fmt.Printf("  * User: %s\n", feedFollow.UserName)
+
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error {
+	currentUser := s.cfg.CurrentUserName
+	user, err := s.db.GetUser(context.Background(), currentUser)
+	if err != nil {
+		return fmt.Errorf("cannot get current user: %v", err)
+	}
+
+	feeds, err := s.db.GetFollowFeedsForUser(context.Background(), user.ID)
+	if err != nil {
+		return fmt.Errorf("cannot get feed follows for user: %v", err)
+	}
+
+	fmt.Println("Following feeds:")
+	for _, feed := range feeds {
+		fmt.Printf("  * Name: %s\n", feed.FeedName)
+	}
+
 	return nil
 }
