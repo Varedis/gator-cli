@@ -70,3 +70,40 @@ func handlerListFeeds(s *state, cmd command) error {
 	}
 	return nil
 }
+
+func handlerFollowFeed(s *state, cmd command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("Usage: %s <url>", cmd.Name)
+	}
+
+	url := cmd.Args[0]
+
+	ctx := context.Background()
+
+	// Get Feed
+	feedID, err := s.db.GetFeedByURL(ctx, url)
+	if err != nil {
+		return fmt.Errorf("cannot get feed: %v", err)
+	}
+
+	currentUser := s.cfg.CurrentUserName
+	user, err := s.db.GetUser(ctx, currentUser)
+	if err != nil {
+		return fmt.Errorf("cannot get current user: %v", err)
+	}
+
+	feedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID:     uuid.New(),
+		UserID: user.ID,
+		FeedID: feedID,
+	})
+	if err != nil {
+		return fmt.Errorf("couldn't create feed follow: %v", err)
+	}
+
+	fmt.Println("Followed Feed:")
+	fmt.Printf("  * Name: %s\n", feedFollow.FeedName)
+	fmt.Printf("  * User: %s\n", feedFollow.UserName)
+
+	return nil
+}

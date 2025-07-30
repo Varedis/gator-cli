@@ -11,6 +11,6 @@ SELECT
 FROM
   inserted_feed_follow
 INNER JOIN users
-  ON users.id = feed_follows.user_id
+  ON users.id = inserted_feed_follow.user_id
 INNER JOIN feeds
-  ON feeds.id = feed_follows.feed_id;
+  ON feeds.id = inserted_feed_follow.feed_id;
