@@ -48,6 +48,15 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("couldn't create feed: %v", err)
 	}
 
+	_, err = s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID:     uuid.New(),
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("cannot create feed follow: %v", err)
+	}
+
 	fmt.Println("Feed Created:")
 	fmt.Printf("  * ID: %s\n", feed.ID)
 	fmt.Printf("  * Name: %s\n", feed.Name)
@@ -104,6 +113,26 @@ func handlerFollowFeed(s *state, cmd command) error {
 	fmt.Println("Followed Feed:")
 	fmt.Printf("  * Name: %s\n", feedFollow.FeedName)
 	fmt.Printf("  * User: %s\n", feedFollow.UserName)
+
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error {
+	currentUser := s.cfg.CurrentUserName
+	user, err := s.db.GetUser(context.Background(), currentUser)
+	if err != nil {
+		return fmt.Errorf("cannot get current user: %v", err)
+	}
+
+	feeds, err := s.db.GetFollowFeedsForUser(context.Background(), user.ID)
+	if err != nil {
+		return fmt.Errorf("cannot get feed follows for user: %v", err)
+	}
+
+	fmt.Println("Following feeds:")
+	for _, feed := range feeds {
+		fmt.Printf("  * Name: %s\n", feed.FeedName)
+	}
 
 	return nil
 }
