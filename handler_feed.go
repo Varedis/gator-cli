@@ -8,7 +8,7 @@ import (
 	"github.com/varedis/gator-cli/internal/database"
 )
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
 		return fmt.Errorf("Usage: %s <name> <url>", cmd.Name)
 	}
@@ -17,12 +17,6 @@ func handlerAddFeed(s *state, cmd command) error {
 	url := cmd.Args[1]
 
 	ctx := context.Background()
-
-	currentUser := s.cfg.CurrentUserName
-	user, err := s.db.GetUser(ctx, currentUser)
-	if err != nil {
-		return fmt.Errorf("cannot get current user: %v", err)
-	}
 
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
 		ID:     uuid.New(),

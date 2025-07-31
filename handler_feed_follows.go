@@ -8,7 +8,7 @@ import (
 	"github.com/varedis/gator-cli/internal/database"
 )
 
-func handlerFollowFeed(s *state, cmd command) error {
+func handlerFollowFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("Usage: %s <url>", cmd.Name)
 	}
@@ -21,12 +21,6 @@ func handlerFollowFeed(s *state, cmd command) error {
 	feedID, err := s.db.GetFeedByURL(ctx, url)
 	if err != nil {
 		return fmt.Errorf("cannot get feed: %v", err)
-	}
-
-	currentUser := s.cfg.CurrentUserName
-	user, err := s.db.GetUser(ctx, currentUser)
-	if err != nil {
-		return fmt.Errorf("cannot get current user: %v", err)
 	}
 
 	feedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
@@ -45,13 +39,7 @@ func handlerFollowFeed(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollowing(s *state, cmd command) error {
-	currentUser := s.cfg.CurrentUserName
-	user, err := s.db.GetUser(context.Background(), currentUser)
-	if err != nil {
-		return fmt.Errorf("cannot get current user: %v", err)
-	}
-
+func handlerFollowing(s *state, cmd command, user database.User) error {
 	feedFollows, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
 		return fmt.Errorf("cannot get feed follows for user: %v", err)
