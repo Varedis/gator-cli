@@ -51,6 +51,76 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 	return i, err
 }
 
+const findPostsForUser = `-- name: FindPostsForUser :many
+SELECT
+  posts.id, posts.created_at, posts.updated_at, posts.title, posts.url, posts.description, posts.published_at, posts.feed_id,
+  feeds.name as feed_name
+FROM
+  posts
+INNER JOIN feed_follows
+  ON feed_follows.feed_id = posts.feed_id
+INNER JOIN feeds
+  ON feeds.id = posts.feed_id
+WHERE feed_follows.user_id = $1
+  AND (
+    posts.title LIKE '%' || $2 || '%' OR
+    posts.description LIKE '%' || $2 || '%'
+  )
+ORDER BY posts.published_at DESC
+LIMIT $3
+`
+
+type FindPostsForUserParams struct {
+	UserID  uuid.UUID
+	Column2 sql.NullString
+	Limit   int32
+}
+
+type FindPostsForUserRow struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Title       string
+	Url         string
+	Description sql.NullString
+	PublishedAt sql.NullTime
+	FeedID      uuid.UUID
+	FeedName    string
+}
+
+func (q *Queries) FindPostsForUser(ctx context.Context, arg FindPostsForUserParams) ([]FindPostsForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, findPostsForUser, arg.UserID, arg.Column2, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindPostsForUserRow
+	for rows.Next() {
+		var i FindPostsForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.FeedID,
+			&i.FeedName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostsForUser = `-- name: GetPostsForUser :many
 SELECT
   posts.id, posts.created_at, posts.updated_at, posts.title, posts.url, posts.description, posts.published_at, posts.feed_id,
