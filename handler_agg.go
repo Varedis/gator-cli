@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,23 +53,27 @@ func scrapeFeeds(s *state) error {
 	}
 
 	for _, item := range fetched.Channel.Item {
-		fmt.Printf("Found post: %s\n", item.Title)
-		parsedTime, err := time.Parse(time.RFC822, item.PubDate)
-		if err != nil {
-			return fmt.Errorf("couldn't parse the publish date: %v", err)
+		publishedAt := sql.NullTime{}
+		if t, err := time.Parse(time.RFC1123Z, item.PubDate); err == nil {
+			publishedAt = sql.NullTime{Time: t, Valid: true}
 		}
+
 		post, err := s.db.CreatePost(context.Background(), database.CreatePostParams{
 			ID:          uuid.New(),
 			Title:       item.Title,
 			Url:         item.Link,
 			Description: sql.NullString{String: item.Description, Valid: true},
-			PublishedAt: sql.NullTime{Time: parsedTime, Valid: true},
+			PublishedAt: publishedAt,
 			FeedID:      feed.ID,
 		})
 		if err != nil {
-			return fmt.Errorf("error inserting post: %v", err)
+			if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+				continue
+			}
+			log.Printf("Couldn't create post: %v\n", err)
+			continue
 		}
-		fmt.Printf("Post Saved: %s\n", post.ID)
+		fmt.Printf("Post Saved: %s\n", post.Title)
 	}
 
 	fmt.Printf("Feed %s collected, %v posts found\n", feed.Name, len(fetched.Channel.Item))
